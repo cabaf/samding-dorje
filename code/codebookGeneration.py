@@ -93,7 +93,6 @@ def codebook_generation(visual_world, n_words, conf):
     opts = {"codebook_type":"gmm"}
     if conf is not None:
        opts.update(conf)
-    visual_world = load_raw_featurse(feature_list, opts)
     if opts["codebook_type"] is "kmeans":
         v_words = kmeans_voc(visual_world, n_words, conf)
     elif opts["codebook_type"] is "gmm":
