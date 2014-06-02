@@ -16,6 +16,7 @@ import os.path
 import sys
 import numpy as np
 from scipy.io import loadmat
+import re
 
 def get_all_video_ids(dataset_info_file, dataset_path, **args):
     """
@@ -65,17 +66,19 @@ def get_all_video_ids(dataset_info_file, dataset_path, **args):
     video_list = np.unique(np.array(video_list))
     full_path_video_list = []
     for vidx in video_list:
-        print vidx
         full_path_video_list += get_video_full_path(vidx, dataset_path)
     ############################################################################
     return full_path_video_list
     ############################################################################
 
 def get_video_full_path(video_id, dataset_path, ext="avi"):
+    video_id = re.escape(video_id)
     command = "find {0} -name '*{1}.{2}'".format(dataset_path, video_id, ext)
     file_path = os.popen(command).read()[:-1]
     # Sanity check
-    if not os.path.isfile(file_path):
-        print "Error: File not found. Check provided dataset path."
-        file_path = ''
+    file_path = file_path.rsplit("\n")
+    for this_found in file_path:
+        if not os.path.isfile(this_found):
+            print "Error: File not found {}".format(this_found)
+            file_path = ''
     return file_path
