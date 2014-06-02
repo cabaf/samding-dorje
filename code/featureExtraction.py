@@ -84,11 +84,10 @@ def improved_trajectories_call(video_file, output_path, idt_bin, opts):
         if opts["verbose"]:
             print "Failed computation: {}".format(video_file)
         return video_file
-    command = "{0} {1} -L {2} -W {3} -N {4} -s {5} -t {6} -o {7}".format(
+    command = "{0} '{1}' -L {2} -W {3} -N {4} -s {5} -t {6} -o {7}".format(
               idt_bin, video_file, opts["trajectory_length"],
               opts["sampling_stride"], opts["neighborhood_size"],
               opts["spatial_cells"], opts["temporal_cells"], output_path)
-    print command
     os.system(command)
     if opts["verbose"]:
         print "Processed video {}".format(video_file)
