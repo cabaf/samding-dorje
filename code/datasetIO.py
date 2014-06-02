@@ -67,6 +67,7 @@ def get_all_video_ids(dataset_info_file, dataset_path, **args):
     full_path_video_list = []
     for vidx in video_list:
         full_path_video_list += get_video_full_path(vidx, dataset_path)
+    full_path_video_list = list(set(full_path_video_list))
     ############################################################################
     return full_path_video_list
     ############################################################################
