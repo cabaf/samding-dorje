@@ -13,8 +13,9 @@ import os.path
 import subprocess
 from multiprocessing import Pool
 import itertools
+import sys
 
-def extract_features(video_files, output_path, idt_bin, **args):
+def extract_features(video_files, output_path, idt_bin, args):
     """
     ____________________________________________________________________
        extract_features:
