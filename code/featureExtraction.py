@@ -97,3 +97,83 @@ def improved_trajectories_call(video_file, output_path, idt_bin, opts):
 def daemon_improved_trajectories_call(args):
     return improved_trajectories_call(*args)
 
+def parse_dense_trajectories(raw_feature_file, *args):
+    """
+    ____________________________________________________________________
+       parse_dense_trajectories: 
+         Read dense trajectories info and descriptors from raw feature 
+         file. Please check the output format specified in:
+         http://lear.inrialpes.fr/~wang/dense_trajectories
+         args:
+           raw_feature_file: Full path for txt file containing the
+             output of dense trajectory execution.
+           output_path (Optional): If provided descriptors and track 
+             info will be divided and stored in different files.
+           opts: Give the following parameters if you change default 
+             dense trajectory extraction.
+             "trajectory_length": Length of tracking trajectries.
+               (default: L=15)
+             "sampling_stride": the stride for dense sampling feature 
+               points. (default: W=5 pixels)
+             "neighborhood_size": The neighborhood size for computing 
+               the descriptor. (default: N=32 pixels)
+             "spatial_cells": The number of cells in the nxy axis.
+               (default: nxy=2 cells)
+             "temporal_cells": The number of cells in the nt axis. 
+               (default: nt=3 cells)
+           *** If you provide opts please specify output_path (None if
+           storage not needed.)
+         return:
+           track_info: np array containing information about trajectory.
+           descriptors: List containing np arrays for each descriptor. 
+             The order is: [[Trajectory], [HOG], [HOF], [MBHx], [MBHy]]           
+    ____________________________________________________________________
+    """
+    ############################################################################
+    opts = {"trajectory_length":15, "sampling_stride":5, "neighborhood_size":32,
+            "spatial_cells":2, "temporal_cells":3}
+    output_path = None
+    if len(args)==2:
+        if isinstance(args[1], dict):
+            opts.update(args[1])
+        else:
+            print "Error: Third argument should be a dictionary."
+    if len(args)>0:
+        if isinstance(args[0], str):
+            output_path = args[0]
+        else:
+            print "Error: Third argument should be an string."
+    if output_path is not None:
+        if not os.path.isdir(output_path):
+            os.mkdir(output_path)
+        video_id = os.path.basename(raw_feature_file).split('.')[0]
+        descriptors_name = ["Trajectory", "HOG", "HOF", "MBHx", "MBHy"]
+    descriptors_length = np.array([2*opts["trajectory_length"],
+                            8*opts["spatial_cells"]**2*opts["temporal_cells"],
+                            9*opts["spatial_cells"]**2*opts["temporal_cells"],
+                            8*opts["spatial_cells"]**2*opts["temporal_cells"],
+                            8*opts["spatial_cells"]**2*opts["temporal_cells"]])
+    data = np.loadtxt(raw_feature_file)
+    track_info = data[:,:9]
+    if output_path is not None:
+        output_name = os.path.join(output_path,
+                    "{0}_{1}.hdf5".format("TrackInfo", video_id))
+        dump = h5py.File(output_name)
+        dump.create_dataset("TrackInfo", data=track_info)
+        dump.close()        
+    start_idx = 9
+    descriptors = []
+    for idx, this_length in enumerate(descriptors_length):
+        end_idx = start_idx + this_length
+        this_descriptor = data[:,start_idx:end_idx]
+        start_idx = end_idx
+        if output_path is not None:
+            output_name = os.path.join(output_path,
+                    "{0}_{1}.hdf5".format(descriptors_name[idx], video_id))
+            dump = h5py.File(output_name)
+            dump.create_dataset(descriptors_name[idx], data=this_descriptor)
+            dump.close()            
+        descriptors.append(this_descriptor)
+    ############################################################################
+    return track_info, descriptors
+    ############################################################################
