@@ -9,11 +9,12 @@
 '''
 
 import os
-import os.path
 import subprocess
 from multiprocessing import Pool
 import itertools
 import sys
+import h5py
+import numpy as np
 
 def extract_features(video_files, output_path, idt_bin, args):
     """
@@ -133,6 +134,7 @@ def parse_dense_trajectories(raw_feature_file, *args):
     opts = {"trajectory_length":15, "sampling_stride":5, "neighborhood_size":32,
             "spatial_cells":2, "temporal_cells":3}
     output_path = None
+    #print raw_feature_file, args
     failed_computation = None
     if len(args)==2:
         if isinstance(args[1], dict):
@@ -157,8 +159,12 @@ def parse_dense_trajectories(raw_feature_file, *args):
                             9*opts["spatial_cells"]**2*opts["temporal_cells"],
                             8*opts["spatial_cells"]**2*opts["temporal_cells"],
                             8*opts["spatial_cells"]**2*opts["temporal_cells"]])
-    data = np.loadtxt(raw_feature_file)
-    track_info = data[:,:9]
+    try:
+        data = np.loadtxt(raw_feature_file)
+    except:
+        failed_computation = raw_feature_file
+        return raw_feature_file
+    track_info = data[:,:10]
     if output_path is not None:
         output_name = os.path.join(output_path,
                     "{0}_{1}.hdf5".format("TrackInfo", video_id))
@@ -166,7 +172,7 @@ def parse_dense_trajectories(raw_feature_file, *args):
             dump = h5py.File(output_name)
             dump.create_dataset("TrackInfo", data=track_info)
             dump.close()        
-    start_idx = 9
+    start_idx = 10
     descriptors = []
     for idx, this_length in enumerate(descriptors_length):
         end_idx = start_idx + this_length
@@ -236,14 +242,17 @@ def format_features(raw_feature_file_list, output_path, *args):
                                  itertools.repeat(output_path),
                                  itertools.repeat(opts))
     f_pool = Pool(opts["n_jobs"])
+    files_fails = []
     for idx, failed_computation in enumerate(\
       f_pool.imap_unordered(daemon_parse_dense_trajectories, format_args),1):
         sys.stderr.write('\rPercentage video processed: %0.2f%%' % \
                                 (100*idx/(0.0+len(raw_feature_file_list))))
+        if failed_computation is not None:
+            files_fails.append(failed_computation)
     print "\nFinish!\n"
     f_pool.close()
     f_pool.join()
-    print "Formating fails for this files: \n", failed_computation
+    print "Formating fails for this files: \n", files_fails
     return failed_computation
 
 def daemon_parse_dense_trajectories(args):
