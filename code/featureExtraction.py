@@ -395,8 +395,8 @@ def extract_background_features(background_filename, dataset_path,
     """
     ############################################################################
     opts = {"sample_ratio":0.1, "sift_attempts":10}
-    if len(fopts)==1 and isinstance(fopts, dict):
-        opst.update(fopts[0])        
+    if isinstance(fopts[0], dict):
+        opts.update(fopts[0])        
     video_basename = os.path.basename(background_filename).split('.')[0]
     video_id = video_basename.split("Background_")[1]    
     video_fullpath = os.path.join(dataset_path, "{}.avi".format(video_id))
@@ -416,7 +416,7 @@ def extract_background_features(background_filename, dataset_path,
         os.mkdir(output_path)
     
     # Reading txt file
-    try:
+    try:        
         data = np.loadtxt(background_filename)
     except:
         flag_fndm = background_filename
@@ -442,14 +442,15 @@ def extract_background_features(background_filename, dataset_path,
     else:
         attempts = 0
         while attempts < opts["sift_attempts"]:
-            try:
-                if not os.path.isfile(sift_filename):
-                    video_frames = np.array(range(1, int(np.max(data[:, 0]))))
+            try:                
+                if not os.path.isfile(sift_filename):                    
+                    video_frames = np.array(range(1, int(np.max(data[:,0]))))
                     np.random.shuffle(video_frames)
                     frm_sift = list(video_frames[:int(video_frames.shape[0]\
                                                 *opts["sample_ratio"])])
-                    sift_desc, sift_desc_info = compute_sift(video_filename, 
-                                                             frm_sift)
+                    
+                    sift_desc, sift_desc_info = compute_sift(video_fullpath, 
+                                                             frm_sift)                    
                     dump = h5py.File(sift_filename)
                     dump.create_dataset("SIFT", data=sift_desc)
                     dump.close()
@@ -462,3 +463,6 @@ def extract_background_features(background_filename, dataset_path,
                 flag_sift = background_filename
                 attempts += 1
     return [flag_fndm, flag_sift]
+
+def daemon_extract_background_features(args):
+    return extract_background_features(*args)
