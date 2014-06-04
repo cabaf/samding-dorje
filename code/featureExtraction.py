@@ -322,3 +322,49 @@ def compute_fundamental_matrix(data):
         frame_info = np.vstack((frame_info, frm_id))
     fund_matrix = np.delete(fund_matrix, 0, 0)
     return fund_matrix, frame_info
+
+def compute_sift(video_filename, frame_list):
+    """
+    ____________________________________________________________________
+       compute_sift:
+         extract sift descriptors on specified frames.
+         args:
+           video_filename: full path for video.
+           frame_list: List containing number of frames where to extract
+             sift descriptor.
+         return:
+           sift_descriptor: Computed sift descriptor on desired frames 
+             in an N*128 np array.
+           sift_info: N*7 where each columns contains information about
+             the keypoint:
+             [1]: frame number.
+             [2]: x.
+             [3]: y.
+             [4]: angle.
+             [5]: octave.
+             [6]: size.
+             [7]: response.
+    ____________________________________________________________________
+    """
+    if not os.path.isfile(video_filename):
+        print "Error: video file not found."
+    video_cap = cv2.VideoCapture(video_filename)
+    sift_descp = np.empty((1, 128))
+    sift_info = np.empty((1, 7))
+    count, sucess = 1, 1
+    while(sucess):
+        sucess, frame = video_cap.read()
+        if count in frame_list:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            sift = cv2.SIFT()        
+            kpts, desc = sift.detectAndCompute(gray, None)             
+            for idx, this_kpt in enumerate(kpts):                
+                kpts_info = np.array([count, this_kpt.pt[0], this_kpt.pt[1],
+                                      this_kpt.angle, this_kpt.octave,
+                                      this_kpt.size, this_kpt.response])
+                sift_info = np.vstack((sift_info, kpts_info))            
+            sift_descp = np.vstack((sift_descp, desc))
+        count += 1
+    sift_descp = np.delete(sift_descp, 0, 0)
+    sift_info = np.delete(sift_info, 0, 0)
+    return sift_descp, sift_info
