@@ -15,6 +15,7 @@ import itertools
 import sys
 import h5py
 import numpy as np
+import cv2
 
 def extract_features(video_files, output_path, idt_bin, args):
     """
@@ -257,3 +258,67 @@ def format_features(raw_feature_file_list, output_path, *args):
 
 def daemon_parse_dense_trajectories(args):
     return parse_dense_trajectories(*args)
+
+def compute_fundamental_matrix(data):    
+    """
+    ____________________________________________________________________
+       compute_fundamental_matrix:
+         Parse background track points from Improved Trajectories V2.0.
+         args:
+           data: np array containing the following info.
+           [0:10]: Trajectory info. (See Wang et al. 2011)
+           [10::2]: x position of trajectory points.
+           [11::2]: y position of trajectory points.
+         return:
+           fund_matrix: N*9 np array containing reshaped fundamental 
+             matrix for those frames who has sufficient inliers points.
+           frame_info: N*1 np array containing the frame position where 
+             fundamental matrix was computed.
+             the keypoint:
+             [0]: frame number.
+             [1]: x.
+             [2]: y.
+             [3]: angle.
+             [4]: octave.
+             [5]: size.
+             [6]: response.
+    ____________________________________________________________________
+    """
+    # Last frame for each feature
+    lf = np.array(data[:,0],dtype=np.int)
+    # Feature coordinates
+    x = data[:,10:-2:2]
+    x_next = data[:,12::2]
+    y = data[:,11:-2:2]
+    y_next = data[:,13::2]
+    # Trajectory length
+    tl = x.shape[1] + 1
+    # Number of frames
+    nf = np.max(lf)
+    # Pre-Locating a point frame matrix for speed up.
+    pf = np.zeros((lf.shape[0],tl-1),dtype=np.int)
+    # A temporal matrix position for each feature. 
+    # |1 2 3 ...   tl-1|
+    # |3 4 5 ... tl-1+3|
+    # |nf-tl ...     nf|
+    for idx, f_id in enumerate(lf): 
+        start_idx = f_id - tl + 1
+        end_idx = start_idx + tl - 1
+        pf[idx,:] = np.array(range(start_idx,end_idx), dtype=np.int)
+        start_idx = end_idx
+    # Compute fundamental matrix for each pair of frames.
+    fund_matrix = np.empty((1,9))
+    frame_info = np.empty((0,1))
+    for frm_id in range(1,nf):
+        this_x = np.vstack((x[np.where(pf==frm_id)], x_next[np.where(pf==frm_id)]))
+        this_y = np.vstack((y[np.where(pf==frm_id)], y_next[np.where(pf==frm_id)]))
+        prev_pts = np.vstack((this_x[0,:], this_y[0,:]))
+        next_pts = np.vstack((this_x[1,:], this_y[1,:]))
+        try:
+            f_mt = cv2.findFundamentalMat(prev_pts.T, next_pts.T)[0]            
+        except:
+            continue
+        fund_matrix = np.vstack((fund_matrix, np.reshape(f_mt, (1,9))))
+        frame_info = np.vstack((frame_info, frm_id))
+    fund_matrix = np.delete(fund_matrix, 0, 0)
+    return fund_matrix, frame_info
