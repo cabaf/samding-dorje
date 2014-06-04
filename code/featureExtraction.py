@@ -374,6 +374,8 @@ def extract_background_features(background_filename, dataset_path,
     """
     ____________________________________________________________________
     extract_background_features
+    Wrapper to extract fundamental matrix and sift on background 
+      features.
       args:
         background_filename: full path for file containing background
           trajectories. To ensure parsing, the file must have the 
@@ -466,3 +468,55 @@ def extract_background_features(background_filename, dataset_path,
 
 def daemon_extract_background_features(args):
     return extract_background_features(*args)
+
+def parallel_extract_background_features(background_filenames_list,
+                                         dataset_path, output_path, *fopts):
+    ############################################################################
+    """
+    ____________________________________________________________________
+    parallel_extract_background_features
+      args:
+        background_filenames_list: List of full paths for files 
+          containing background trajectories. To ensure parsing, the 
+          file must have the following format for each row:
+            [1:10]: Trajectory info. (See Wang et al. 2011)
+            [10:Tl*2]: (x,y) positions of trajectory points. Tl is the
+            lenght of the track.
+        dataset_path: Full path where videos are located.
+        output_path: Where features will be saved.
+        fopts: Configuration options:
+          "sample_ratio": Temporal sample ratio for sift computation.
+          "sift_attempts": Sanity check due to incorrect frame alignment 
+            between tracks and opencv capture. Must be >= 1.
+          "n_jobs": Number of jobs for parallel processing.
+      return:
+        failed_computation: List of len 2 containing info if fails 
+          computing fundamental matrix or sift. Returns None if all was
+          well.
+    ____________________________________________________________________
+    """
+    opts = {"n_jobs":2}
+    if len(fopts)==1:
+        if isinstance(fopts[0], dict):
+            opts.update(fopts[0])
+        else:
+            print "Error: Fourth argument must be a dictionary."
+    if not os.path.isdir(output_path):
+        os.mkdir(output_path)
+    format_args = itertools.izip(background_filenames_list,
+                                 itertools.repeat(dataset_path),
+                                 itertools.repeat(output_path),
+                                 itertools.repeat(opts))
+    f_pool = Pool(opts["n_jobs"])
+    files_fails = []
+    for idx, failed_computation in enumerate(f_pool.imap_unordered(\
+                            daemon_extract_background_features, format_args),1):
+        sys.stderr.write('\rPercentage video processed: %0.2f%%'\
+                         % (100*idx/(0.0+len(background_filenames_list))))
+        if failed_computation is not None:
+            files_fails.append(failed_computation)
+    print "\nFinish!\n"
+    f_pool.close()
+    f_pool.join()
+    print "Feature extraction fails for this files: \n", files_fails
+    return failed_computation
