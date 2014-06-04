@@ -368,3 +368,97 @@ def compute_sift(video_filename, frame_list):
     sift_descp = np.delete(sift_descp, 0, 0)
     sift_info = np.delete(sift_info, 0, 0)
     return sift_descp, sift_info
+
+def extract_background_features(background_filename, dataset_path,
+                                output_path, *fopts):
+    """
+    ____________________________________________________________________
+    extract_background_features
+      args:
+        background_filename: full path for file containing background
+          trajectories. To ensure parsing, the file must have the 
+          following format for each row:
+            [1:10]: Trajectory info. (See Wang et al. 2011)
+            [10:Tl*2]: (x,y) positions of trajectory points. Tl is the
+            lenght of the track.
+        dataset_path: Full path where videos are located.
+        output_path: Where features will be saved.
+        fopts: Configuration options:
+          "sample_ratio": Temporal sample ratio for sift computation.
+          "sift_attempts": Sanity check due to incorrect frame alignment 
+            between tracks and opencv capture. Must be >= 1.
+      return:
+        failed_computation: List of len 2 containing info if fails 
+          computing fundamental matrix or sift. Returns None if all was
+          well.
+    ____________________________________________________________________
+    """
+    ############################################################################
+    opts = {"sample_ratio":0.1, "sift_attempts":10}
+    if len(fopts)==1 and isinstance(fopts, dict):
+        opst.update(fopts[0])        
+    video_basename = os.path.basename(background_filename).split('.')[0]
+    video_id = video_basename.split("Background_")[1]    
+    video_fullpath = os.path.join(dataset_path, "{}.avi".format(video_id))
+    cam_motion_filename = os.path.join(output_path, 
+                                       "{0}_Background_{1}.hdf5".format("CamMotion",
+                                                                        video_id))
+    cam_motion_info = os.path.join(output_path, 
+                                   "{0}_Background_{1}.hdf5".format("CamInfo",
+                                                                    video_id))
+    sift_filename = os.path.join(output_path, 
+                                 "{0}_Background_{1}.hdf5".format("SIFT", 
+                                                                  video_id))
+    sift_info = os.path.join(output_path, 
+                             "{0}_Background_{1}.hdf5".format("SIFTInfo", 
+                                                              video_id))
+    if not os.path.isdir(output_path):
+        os.mkdir(output_path)
+    
+    # Reading txt file
+    try:
+        data = np.loadtxt(background_filename)
+    except:
+        flag_fndm = background_filename
+        flag_sift = background_filename
+    
+    # Computing fundamental matrix and saving on disk.
+    try:
+        if not os.path.isfile(cam_motion_filename):
+            fnd_matrix, fnd_matrix_info = compute_fundamental_matrix(data)
+            dump = h5py.File(cam_motion_filename)
+            dump.create_dataset("CamMotion", data=fnd_matrix)
+            dump.close()
+            dump = h5py.File(cam_motion_info)
+            dump.create_dataset("CamInfo", data=fnd_matrix_info)
+            dump.close()
+        flag_fndm = None
+    except:
+        flag_fndm = background_filename
+    
+    # Computing sift descriptors and saving on disk.    
+    if not os.path.isfile(video_fullpath):        
+        flag_sift = background_filename
+    else:
+        attempts = 0
+        while attempts < opts["sift_attempts"]:
+            try:
+                if not os.path.isfile(sift_filename):
+                    video_frames = np.array(range(1, int(np.max(data[:, 0]))))
+                    np.random.shuffle(video_frames)
+                    frm_sift = list(video_frames[:int(video_frames.shape[0]\
+                                                *opts["sample_ratio"])])
+                    sift_desc, sift_desc_info = compute_sift(video_filename, 
+                                                             frm_sift)
+                    dump = h5py.File(sift_filename)
+                    dump.create_dataset("SIFT", data=sift_desc)
+                    dump.close()
+                    dump = h5py.File(sift_info)
+                    dump.create_dataset("SIFTInfo", data=sift_desc_info)
+                    dump.close()
+                flag_sift = None
+                break
+            except:
+                flag_sift = background_filename
+                attempts += 1
+    return [flag_fndm, flag_sift]
