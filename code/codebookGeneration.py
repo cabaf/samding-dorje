@@ -186,3 +186,62 @@ def apply_pca_to_visual_world(visual_world, output_filename, *conf):
     # Write on disk learned model.    
     pickle.dump(pca_model, open(output_filename, "w"))
     return visual_world
+
+def parallel_codebook_computation(training_features, codebook_size, 
+                                  feature_type, *conf):
+    """
+    ____________________________________________________________________
+       parallel_codebook_computation:
+         Wrapper function for reading features and computing visual 
+         codebook, all in parallel if required.
+         args:
+           training_features: List containing full path for extracted 
+             features.
+           codebook_size: Number of visual words after visual world 
+             embedding.
+           feature_type: Indicate the feature type in order to read 
+             hdf5 files.
+           conf: Read carefully the existing configuration options:
+           *** Codebook Generation ***
+             "codebook_type": "gmm" or "kmeans".
+             "pca_filename" (REQUIRED if PCA): Full path where learned 
+               model will be stored.
+           *** PCA ***
+             "whiten": The components_ vectors are divided by the 
+               singular values to ensure uncorrelated outputs with unit 
+               component-wise variances (Default: True)
+             "reduction_rate": Rate to reduce feature dimensionality.
+               (Default: 1 -- No reduction.)
+           *** kmeans ***
+             "kmeans_verbose": Display progress or not (True,False)
+             "kmeans_iterations": Max number of iterations for k-means.
+             "kmeans_ntrial": Number of re-starts for robust estimation.
+             "kmeans_njobs": Number of jobs for parallel speed up.
+          return:
+            codebook: K*M np array containing computed codebook, 
+              where K is the codebook size and M is the feature
+              dimensionality.
+    ____________________________________________________________________
+    
+    """
+    ############################################################################
+    opts = {"sample_ratio": 0.0005, "codebook_type": "kmeans", "kmeans_jobs":4,
+            "n_jobs":4}
+    if len(conf)>0:
+        if isinstance(conf[0], dict):
+            opts.update(conf[0])
+        else:
+            "Warning: Opts not override. See help."
+    f_pool = Pool(opts["n_jobs"])
+    format_args = itertools.izip(files, itertools.repeat(opts["sample_ratio"]),
+                                 itertools.repeat(feature_type))
+    for idx, this_feat in enumerate(f_pool.imap_unordered(daemon_read_and_sample_features,
+                                                          format_args)):
+        try:        
+            visual_world = np.vstack((visual_world, this_feat))
+        except:        
+            visual_world = this_feat
+    f_pool.close()
+    f_pool.join()
+    codebook = codebook_generation(visual_world, codebook_size, opts)
+    return codebook
