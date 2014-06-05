@@ -110,7 +110,8 @@ def codebook_generation(visual_world, n_words, *conf):
     elif opts["codebook_type"] is "gmm":
         try:
             output_filename = opts["pca_filename"]
-            apply_pca_to_visual_world(visual_world, output_filename, opts)
+            visual_world = apply_pca_to_visual_world(visual_world,
+                                                     output_filename, opts)
         except:
             print "Warning: No PCA performed. You must indicate where save model."                    
         v_words = gmm_voc(visual_world, n_words)
