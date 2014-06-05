@@ -68,36 +68,29 @@ def gmm_voc(visual_world, n_gaussians, *conf):
     return v_words
     ############################################################################
 
-def codebook_generation(visual_world, n_words, conf):
-    """
+def codebook_generation(visual_world, n_words, *conf):
+    """ 
     ____________________________________________________________________
        codebook_generation:
          Compute codebook for set of files. It could be based on kmeans
          or based on GMM.
          args:
-           visual_world: NxM np array where N is the numer of visual
-             examples and N is the legth of dimensionality.
+           visual_world: NxM np array where N is the number of visual
+             examples and M is the length of dimensionality.
            n_words: Number of visual words.
-           conf: It shouls contain the following dictionary key/value:
+           conf: It must contain the following dictionary key/value:
              "codebook_type": "gmm" or "kmeans".
-             "codebook_sample_ratio": ratio for sampling features [0-1].
-             "codebook_pca_whiten": Flag to conduct pca,
-               useful for GMM codebook formation (True/False).
-             "codebook_pca_reduction": Reduction rate of feature
-               dimensionality when PCA is applied.
-             "codebook_pca_path": Full path that will be used to write
-               learned PCA model.
-             "codebook_verbose": Display information (True/False).
+             (See options in help of *_voc functions.)
          return:
            v_words: np array containing computed codebook.
     ____________________________________________________________________
     """
     ############################################################################
-    opts = {"codebook_type":"gmm"}
-    if conf is not None:
-       opts.update(conf)
+    opts = {"codebook_type":"kmeans"}
+    if len(conf) > 0:
+       opts.update(conf[0])
     if opts["codebook_type"] is "kmeans":
-        v_words = kmeans_voc(visual_world, n_words, conf)
+        v_words = kmeans_voc(visual_world, n_words, opts)
     elif opts["codebook_type"] is "gmm":
         v_words = gmm_voc(visual_world, n_words)
     else:
