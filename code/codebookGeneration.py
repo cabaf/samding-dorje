@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 from yael.ynumpy import gmm_learn
 
-def kmeans_voc(visual_world, dictionary_size, **conf):
+def kmeans_voc(visual_world, dictionary_size, *conf):
     """
     ____________________________________________________________________
        kmeans_voc:
@@ -19,7 +19,7 @@ def kmeans_voc(visual_world, dictionary_size, **conf):
          euclidean distance.
          args:
            visual_world: NxM np array where N is the number of visual
-             examples and N is the length of dimensionality.
+             examples and M is the length of dimensionality.
            dictionary_size: Number of visual words K (kmeans's centers).
            conf(optional): Dictionary including some configurations.
              "kmeans_verbose": Display progress or not (True,False)
@@ -32,9 +32,12 @@ def kmeans_voc(visual_world, dictionary_size, **conf):
     ############################################################################
     opts = {"kmeans_verbose":False, "kmeans_iterations":300, "kmeans_ntrial":8}
     if conf is not None:
-       opts.update(conf)
+        if isinstance(conf, dict):
+            opts.update(conf[0])
+        else:
+            print "Warning: Opts not override. See help."
     km = KMeans(n_clusters=dictionary_size, verbose=opts["kmeans_verbose"],
-                n_init=opts["kmeans_trial"], max_iter=opts["kmeans_iterations"])
+                n_init=opts["kmeans_ntrial"], max_iter=opts["kmeans_iterations"])
     km.fit(visual_world)
     v_words = km.cluster_centers_
     ############################################################################
