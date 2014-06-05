@@ -401,7 +401,7 @@ def extract_background_features(background_filename, dataset_path,
         opts.update(fopts[0])        
     video_basename = os.path.basename(background_filename).split('.')[0]
     video_id = video_basename.split("Background_")[1]    
-    video_fullpath = os.path.join(dataset_path, "{}.avi".format(video_id))
+    video_fullpath = os.path.join(dataset_path, "{0}.avi".format(video_id))
     cam_motion_filename = os.path.join(output_path, 
                                        "{0}_Background_{1}.hdf5".format("CamMotion",
                                                                         video_id))
