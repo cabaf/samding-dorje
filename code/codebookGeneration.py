@@ -126,3 +126,42 @@ def read_and_sample_features(file_name, sample_ratio, file_key):
 
 def daemon_read_and_sample_features(args):
     return read_and_sample_features(*args)
+
+def apply_pca_to_visual_world(visual_world, output_path, data_key, *conf):
+    """
+    ____________________________________________________________________
+       apply_pca_to_visal_world:
+         Learn a pca model from input data, transform visual training 
+         world, and write learned model on disk.
+         args:
+           visual_world: NxM np array where N is the number of visual
+             examples and M is the length of dimensionality.             
+           output_path: Full path where learned model will be stored.
+           data_key: Dataset name for hdf5 storage.
+           conf (Optional): Configuration parameters for learning and 
+             applying PCA.
+             "whiten": The components_ vectors are divided by the 
+             singular values to ensure uncorrelated outputs with unit 
+             component-wise variances (Default: True)
+             "reduction_rate": Rate to reduce feature dimensionality.
+             (Default: 1 -- No reduction.)
+    ____________________________________________________________________
+    """
+    opts = {"whiten":True, "reduction_rate":1}
+    if len(conf)>0:
+        if isinstance(conf[0], dict):
+            opts.update(conf[0])
+        else:
+            print "Warning: Opts not override. See help." 
+    if not os.path.isdir(output_path):
+        os.mkdir(output_path)
+    output_name = os.path.join(codebook_path, "PCA_{0}.p".format(key))
+    # Learn PCA model for visual world.
+    pca_dim = np.int(visual_world.shape[1]/opts["reduction_rate"])
+    pca_model = RandomizedPCA(n_components=pca_dim, whiten=opts["whiten"])
+    pca_model.fit(visual_world)
+    # Apply learned model to training data.
+    visual_world = pca_model.transform(visual_world)
+    # Write on disk learned model.    
+    pickle.dump(pca_model, open(output_name, "w"))
+    return visual_world
