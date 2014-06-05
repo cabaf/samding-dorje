@@ -31,7 +31,7 @@ def kmeans_voc(visual_world, dictionary_size, *conf):
     """
     ############################################################################
     opts = {"kmeans_verbose":False, "kmeans_iterations":300, "kmeans_ntrial":8}
-    if conf is not None:
+    if len(conf)>0:
         if isinstance(conf, dict):
             opts.update(conf[0])
         else:
@@ -44,7 +44,7 @@ def kmeans_voc(visual_world, dictionary_size, *conf):
     return v_words
     ############################################################################
 
-def gmm_voc(visual_world, n_gaussians, **conf):
+def gmm_voc(visual_world, n_gaussians, *conf):
     """
     ____________________________________________________________________
        gmm_voc:
@@ -52,7 +52,7 @@ def gmm_voc(visual_world, n_gaussians, **conf):
          over feature space.
          args:
            visual_world: NxM np array where N is the numer of visual
-             examples and N is the legth of dimensionality.
+             examples and M is the legth of dimensionality.
            n_gaussians: Number of gaussians to model feature space.
          return:
            v_words: KxM np array where K is the number of gaussians and 
