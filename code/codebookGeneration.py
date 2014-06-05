@@ -80,7 +80,14 @@ def codebook_generation(visual_world, n_words, *conf):
            n_words: Number of visual words.
            conf: It must contain the following dictionary key/value:
              "codebook_type": "gmm" or "kmeans".
-             (See options in help of *_voc functions.)
+             "pca_filename" (REQUIRED if PCA): Full path where learned 
+               model will be stored.
+             "whiten": The components_ vectors are divided by the 
+             singular values to ensure uncorrelated outputs with unit 
+             component-wise variances (Default: True)
+             "reduction_rate": Rate to reduce feature dimensionality.
+               (Default: 1 -- No reduction.)
+             ******(See options in help of *_voc functions.)********
          return:
            v_words: np array containing computed codebook.
     ____________________________________________________________________
@@ -88,10 +95,18 @@ def codebook_generation(visual_world, n_words, *conf):
     ############################################################################
     opts = {"codebook_type":"kmeans"}
     if len(conf) > 0:
-       opts.update(conf[0])
+        if isinstance(conf[0], dict):
+            opts.update(conf[0])
+        else:
+            print "Warning: Opts not override. See help."
     if opts["codebook_type"] is "kmeans":
         v_words = kmeans_voc(visual_world, n_words, opts)
     elif opts["codebook_type"] is "gmm":
+        try:
+            output_filename = opts["pca_filename"]
+            apply_pca_to_visual_world(visual_world, output_filename, opts)
+        except:
+            print "Warning: No PCA performed. You must indicate where save model."                    
         v_words = gmm_voc(visual_world, n_words)
     else:
         print "Error: Unknown codebook type."
