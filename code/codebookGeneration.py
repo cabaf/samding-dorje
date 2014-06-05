@@ -9,7 +9,11 @@
 '''
 import os
 import pickle
+from multiprocessing import Pool
+import itertools
+import h5py
 import numpy as np
+from sklearn.decomposition import RandomizedPCA
 from sklearn.cluster import KMeans
 from yael.ynumpy import gmm_learn
 
@@ -233,7 +237,7 @@ def parallel_codebook_computation(training_features, codebook_size,
         else:
             "Warning: Opts not override. See help."
     f_pool = Pool(opts["n_jobs"])
-    format_args = itertools.izip(files, itertools.repeat(opts["sample_ratio"]),
+    format_args = itertools.izip(training_features, itertools.repeat(opts["sample_ratio"]),
                                  itertools.repeat(feature_type))
     for idx, this_feat in enumerate(f_pool.imap_unordered(daemon_read_and_sample_features,
                                                           format_args)):
