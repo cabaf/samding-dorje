@@ -7,6 +7,8 @@
    Copyright @ Fabian Caba H.
    _____________________________________________________________________
 '''
+import os
+import pickle
 import numpy as np
 from sklearn.cluster import KMeans
 from yael.ynumpy import gmm_learn
@@ -25,19 +27,23 @@ def kmeans_voc(visual_world, dictionary_size, *conf):
              "kmeans_verbose": Display progress or not (True,False)
              "kmeans_iterations": Max number of iterations for k-means.
              "kmeans_ntrial": Number of re-starts for robust estimation.
+             "kmeans_njobs": Number of jobs for parallel speed up.
          return:
            v_words: KxM np array coordinates of clusters centers.
     ____________________________________________________________________
     """
     ############################################################################
-    opts = {"kmeans_verbose":False, "kmeans_iterations":300, "kmeans_ntrial":8}
-    if len(conf)>0:
-        if isinstance(conf, dict):
+    opts = {"kmeans_verbose":False, "kmeans_iterations":300, "kmeans_ntrial":8, 
+            "kmeans_njobs":2}
+    if len(conf) > 0:
+        if isinstance(conf[0], dict):
             opts.update(conf[0])
         else:
-            print "Warning: Opts not override. See help."
+            print "Warning: Options not override, third argument should be a "\
+                  "dictionary."
     km = KMeans(n_clusters=dictionary_size, verbose=opts["kmeans_verbose"],
-                n_init=opts["kmeans_ntrial"], max_iter=opts["kmeans_iterations"])
+                n_init=opts["kmeans_ntrial"], 
+                max_iter=opts["kmeans_iterations"], n_jobs=opts["kmeans_njobs"])
     km.fit(visual_world)
     v_words = km.cluster_centers_
     ############################################################################
