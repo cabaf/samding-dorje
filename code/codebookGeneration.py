@@ -99,3 +99,30 @@ def codebook_generation(visual_world, n_words, *conf):
     ############################################################################
     return v_words
     ############################################################################
+
+def read_and_sample_features(file_name, sample_ratio, file_key):
+    """
+    ____________________________________________________________________
+       read_and_sample_features:
+       args:
+         file_name: full path where feature is stored.
+         sample_ratio: Ratio for amount of features sampled from original 
+           file. 1 means not sampling.
+         file_key: Dataset name, for hdf5 storage.
+       return:
+         features: NxM np array containing N sample features. M is the 
+           length of feature dimension.
+    ____________________________________________________________________
+    """
+    if not os.path.isfile(file_name):
+        print "Error: File not found."
+        return None
+    dump = h5py.File(file_name)
+    features = np.array(dump[file_key])
+    np.random.shuffle(features)
+    if sample_ratio<1:
+        features = features[:np.int(features.shape[0]*sample_ratio),:]
+    return features
+
+def daemon_read_and_sample_features(args):
+    return read_and_sample_features(*args)
